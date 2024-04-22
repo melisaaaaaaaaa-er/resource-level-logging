@@ -1,1 +1,183 @@
-# resource-level-logging
+# Resource Level Logging
+
+<H2>Purpose</H2>
+
+- Configure resource level logging for Storage Account and Key Vault resources.
+- Analyze logs on LAW with KQL queries.
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/Resource%20Level%20Logging%20diagram.png"/>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/Resource%20Level%20Logging%20diagram%202.png"/>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/Resource%20Level%20Logging%20diagram%203.png"/>
+
+#
+<h3>Configuring Storage Account Logging</h3>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/1.png"/>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/2.png"/>
+
+Navigate to the Storage account created in prior labs. Go to Diagnostic settings and select the blob storage. Click on “+Add diagnostic setting”.
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/3.png"/>
+
+Select audit and Transaction for the log types to be collected. Storage Read, Write, and Delete will be automatically selected when selecting audit.
+
+Select “Send to LAW” and choose the respective LAW instance to send the logs to.
+Click Save.
+
+#
+<h3>Create Key Vaults</h3>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/4.png"/>
+
+Navigate to the Key vaults blade and select “+ Create”.
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/5.png"/>
+
+Input the key vault instance information and select “Next”.
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/6.png"/>
+
+Select “Vault access policy” for the permission model.
+
+The way key vault works is users need access to the data plane to create and store passwords in Key Vault. We explicitly need to create an access policy for users if you want to create or retrieve Secrets/passwords with those accounts.
+
+Click “Review + create”.
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/7.png"/>
+
+#
+<h4>Configure Policy Permissions</h4>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/8.png"/>
+
+Go to your new key vault instance → Access Policies → select user → allow all the management operation permissions for each category.
+
+#
+<h4>Configure Key Vault Logging</h4>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/9.png"/>
+
+On you key vault blade, go to Diagnostic Settings → + Add Diagnostic Settings.
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/10.png"/>
+
+Select the log options shown and configure to send them to the Log Analytics Workspace.
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/11.png"/>
+
+#
+<h4>Generating Secrets in Key Vault</h4>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/12.png"/>
+
+Back on our Key Vault instance go to Secrets → + Generate/Import.
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/13.png"/>
+
+Create a secret named “Tenant-Global-Admin-Password”.
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/14.png"/>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/15.png"/>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/16.png"/>
+
+Select the secret and click on “Show Secret Value” to see the password.
+
+These activities will have generated Key Vault logs that we will view in the LAW later.
+
+#
+<h3>Generating Storage Account Logs</h3>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/17.png"/>
+
+Go to the Storage Account blade → Containers → + Container → create a new container.
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/18.png"/>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/19.png"/>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/20.png"/>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/21.png"/>
+
+Select the container and add a test text file to it. Edit the file using the built-in text editor and save the changes.
+
+#
+<h3>Analyzing Resource Level Logs</h3>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/22.png"/>
+
+Navigate to your LAW instance and input “StorageBlobLogs” to view the logs generated by Storage Account activities.
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/23.png"/>
+
+Here we can see the test text file that was uploaded onto the Storage Account.
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/24.png"/>
+
+// Reading a bunch of blobs
+
+StorageBlobLogs
+
+| where OperationName == "GetBlob"
+
+This query retrieves logs recording of when content in a Storage Account was accessed.
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/25.png"/>
+
+//Deleting a bunch of blobs (in a short time period)
+
+StorageBlobLogs | where OperationName == "PutBlob"
+
+| where TimeGenerated > ago(24h)
+
+This query retrieves logs records of content being placed into a storage account.
+
+#
+<h3>Analyzing Key Vault Logs</h3>
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/27.png"/>
+
+// List out Secrets
+
+AzureDiagnostics
+
+| where ResourceProvider == "MICROSOFT.KEYVAULT"
+
+| where OperationName == "SecretList"
+
+This query retrieves log records of secrets in the Key Vault.
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/28.png"/>
+
+// Viewing an actual existing password
+
+AzureDiagnostics
+
+| where ResourceProvider == "MICROSOFT.KEYVAULT"
+
+| where OperationName == "SecretGet"
+
+| where ResultSignature == "OK"
+
+This query retrieves log records of instances where a secret/password has been viewed in the Key Vault.
+
+<img src="https://raw.githubusercontent.com/melisaaaaaaaaa-er/resource-level-logging-images/main/29.png"/>
+
+// Viewing a specific existing password
+
+let CRITICAL_PASSWORD_NAME = "Tenant-Global-Admin-Password";
+
+AzureDiagnostics
+
+| where ResourceProvider == "MICROSOFT.KEYVAULT"
+
+| where OperationName == "SecretGet"
+
+| where id_s contains CRITICAL_PASSWORD_NAME
+
+This query retrieves records of a specific existing password in a Key Vault.
